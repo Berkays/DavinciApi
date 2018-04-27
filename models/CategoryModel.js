@@ -1,0 +1,33 @@
+const mongoose = require('mongoose');
+var mongooseHidden = require('mongoose-hidden')()
+const Schema = mongoose.Schema;
+
+const CategorySchema = new Schema({
+    name: { type: String, lowercase: true },
+    imagecount: { type: Number, default: 0, min: 0 },
+    posts: [{ type: mongoose.SchemaTypes.ObjectId, ref: 'Post' }]
+});
+
+CategorySchema.statics.CreateIfNotExists = function (categoryName, next) {
+    Category.findOne({ name: categoryName }, function (err, category) {
+        if (!err) {
+            if (!category) {
+                var categoryModel = {
+                    name: categoryName
+                };
+                Category.create(categoryModel, function (err, category) {
+                    return next(category);
+                });
+            }
+            else {
+                return next(category);
+            }
+        }
+    });
+
+}
+
+CategorySchema.plugin(mongooseHidden);
+
+const Category = mongoose.model('Category', CategorySchema);
+module.exports = Category;
