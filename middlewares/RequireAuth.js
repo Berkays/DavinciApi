@@ -11,7 +11,7 @@ module.exports = function (req, res, next) {
             }
             else {
                 req.token = token;
-                req.username = decoded.user;
+                req.userId = decoded.id;
                 next();
             }
         });

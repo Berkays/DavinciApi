@@ -63,7 +63,11 @@ router.post('/authenticate', function (req, res) {
             }
             else if (bcrypt.compareSync(credentials.pass, user.password)) {
                 //Create a new token with username
-                const payload = { user: user.username };
+
+                const payload = {
+                    id: user.id,
+                    user: user.username
+                };
                 var token = signToken(payload);
                 res.status(200).json({ result: "ok", message: "Authentication succesful", token: token, tokenExpire: config.tokenExpireTime });
             }

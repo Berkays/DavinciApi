@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-var mongooseHidden = require('mongoose-hidden')()
+var mongooseHidden = require('mongoose-hidden')({ hidden: { _id: false } })
 const Schema = mongoose.Schema;
 
 const UserSchema = new Schema({
@@ -15,13 +15,15 @@ const UserSchema = new Schema({
         unique: true,
         required: true,
         trim: true,
-        hide:true
+        select:false
     },
     password: {
         type: String,
         required: true,
-        hide: true
+        hideJSON:true
     },
+    follows: [{ type: mongoose.SchemaTypes.ObjectId, ref: 'Category' }],
+    votes: [{ _id:{type: mongoose.SchemaTypes.ObjectId, ref: 'Post'},vote:{type:Number}}]
 
 }, { timestamps: true })
 
