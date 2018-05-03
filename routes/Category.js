@@ -66,7 +66,7 @@ router.post('/getFollowStatus', requireAuth, function (req, res) {
 });
 
 //return popular categories with 4 most liked images
-router.get('/popularCategories', requireAuth, async function (req, res) {
+router.get('/popularCategories', requireAuth, function (req, res) {
     //Find categories with most images
     //Find images with most likes from these categories
     Category.find().sort({ imagecount: 'desc' }).limit(5).populate({

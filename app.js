@@ -13,7 +13,7 @@ global.UploadBase = path.join(__dirname, "uploads")
 var app = express();
 
 //Initialize
-mongoose.connect(config.mongoDB);
+mongoose.connect(config.remotemongoDB);
 var mongoDB = mongoose.connection;
 
 //Routes
