@@ -24,19 +24,16 @@ router.post('/follow', requireAuth, function (req, res) {
             res.status(500).json({ result: "bad", message: err.message });
         }
         else {
-            if (req.body.category) {
-                Category.findOne({ name: req.body.category }, function (err, category) {
+            if (req.body.categoryId) {
+                Category.findById(req.body.categoryId, function (err, category) {
                     if (err) {
                         res.status(400).json({ result: "bad", message: "Category not found" });
                     }
                     else {
-                        if (!user.follows)
-                            user.follows = new mongoose.SchemaTypes.Array();
-
                         index = user.follows.indexOf(category.id);
 
                         if (index > -1) {
-                            user.follows = user.follows.slice(index, 1);
+                            user.follows.pull(category.id);
                             user.save();
                             res.status(200).json({ result: "ok", message: "Category unfollowed" });
                         }
@@ -48,6 +45,22 @@ router.post('/follow', requireAuth, function (req, res) {
                     }
                 });
             }
+        }
+    });
+});
+
+//get follow status
+router.post('/getFollowStatus', requireAuth, function (req, res) {
+    User.findById(req.userId, (err, user) => {
+
+        var follow = 0;
+        var index = user.follows.indexOf(req.body.categoryId);
+
+        if (index > -1) {
+            res.status(200).json({ result: "ok", message: "Follow status returned", follow: 1 })
+        }
+        else {
+            res.status(200).json({ result: "ok", message: "Follow status returned", follow: 0 })
         }
     });
 });
@@ -83,7 +96,7 @@ router.get('/popularCategories', requireAuth, async function (req, res) {
 });
 
 //autocomplete for category search
-router.post('/autocomplete', function (req, res) {
+router.post('/autocomplete',requireAuth, function (req, res) {
     Category.find({ name: new RegExp('^' + req.body.search, 'g') }).select('name').limit(8).exec(function (err, result) {
         if (err) {
             res.status(500).json({ result: "bad", message: err.message })
@@ -95,7 +108,7 @@ router.post('/autocomplete', function (req, res) {
 });
 
 //return matching categories
-router.post('/search', function (req, res) {
+router.post('/search',requireAuth, function (req, res) {
     Category.find({ name: new RegExp('^' + req.body.category, 'g') }).limit(5).select('name imagecount').populate({
         path: 'posts',
         select: { 'smallImage': 1 },
@@ -127,7 +140,7 @@ router.post('/search', function (req, res) {
 });
 
 //return category posts with small image
-router.post('/', function (req, res) {
+router.post('/',requireAuth, function (req, res) {
     Category.findById(req.body.categoryId).populate({
         path: 'posts',
         select: { 'smallImage': 1 },

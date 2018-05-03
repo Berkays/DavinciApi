@@ -18,6 +18,7 @@ var Post = require('../models/PostModel');
 var Category = require('../models/CategoryModel');
 
 
+
 //return user feed
 router.get('/', requireAuth, function (req, res) {
     User.findById(req.userId)
@@ -40,7 +41,6 @@ router.get('/', requireAuth, function (req, res) {
             }
             else {
                 var promises = [];
-
                 data.follows.forEach(function (category, i) {
 
                     category.posts.forEach(function (post, i) {
@@ -52,7 +52,7 @@ router.get('/', requireAuth, function (req, res) {
 
 
                 Promise.all(promises).then(() => {
-                    res.status(200).json({ result: "ok", message: "Returned posts", data: data });
+                    res.status(200).json({ result: "ok", message: "Returned posts", data: data});
                 });
             }
         });
