@@ -8,12 +8,14 @@ var config = require('./config/config');
 
 //Variables
 var port = process.env.PORT || 3000;
-global.UploadBase = path.join(__dirname, "uploads")
+global.uploads = path.join(__dirname, "uploads")
+global.thumbnailQuality = config.thumbnailQuality;
+global.imageQuality = config.imageQuality;
 
 var app = express();
 
 //Initialize
-mongoose.connect(config.remotemongoDB);
+mongoose.connect(config.localmongoDB);
 var mongoDB = mongoose.connection;
 
 //Routes

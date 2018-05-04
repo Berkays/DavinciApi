@@ -15,8 +15,8 @@ var requireAuth = require('../middlewares/RequireAuth');
 //Models
 var User = require('../models/UserModel');
 
-
-router.post('/register', function (req, res) {
+//register new Account
+router.post('/', function (req, res) {
     if (req.body.username && req.body.email && req.body.password) {
 
         //Hash user password
@@ -29,7 +29,7 @@ router.post('/register', function (req, res) {
             password: hash
         }
 
-        User.create(userInstance, function (err, user) {
+        User.create(userInstance, (err, user) => {
             if (err) {
                 if (err.name == "BulkWriteError")
                     res.status(304).json({ result: "bad", message: "Username already exists" });
@@ -44,6 +44,7 @@ router.post('/register', function (req, res) {
     }
 });
 
+//get authentication token
 router.post('/authenticate', function (req, res) {
     const credentials = auth(req);
 
@@ -53,12 +54,11 @@ router.post('/authenticate', function (req, res) {
             $or: [
                 { username: credentials.name },
                 { email: credentials.name }]
-        }).exec(function (err, user) {
+        }).exec((err, user) => {
             if (err) {
                 res.status(500).json({ result: "bad", message: "Critical error occured" });
             }
             else if (!user) {
-                //User not found
                 res.status(400).json({ result: "bad", message: "User not found" });
             }
             else if (bcrypt.compareSync(credentials.pass, user.password)) {
@@ -78,7 +78,6 @@ router.post('/authenticate', function (req, res) {
 
     }
     else {
-        //No Credentials
         res.json({ result: "bad", message: "Authentication failed" });
     }
 
@@ -88,6 +87,7 @@ router.post('/verifyToken', requireAuth, function (req, res) {
     res.status(200).json({ result: "ok", message: "Token valid" });
 });
 
+//reset user password
 router.post('/resetPassword', function (req, res) {
     if (req.body.username && req.body.password) {
         update = { password: req.body.password };
@@ -95,7 +95,7 @@ router.post('/resetPassword', function (req, res) {
             $or: [
                 { username: req.body.username },
                 { email: req.body.username }]
-        }, update, function (err) {
+        }, update, err => {
             if (err)
                 res.status(500).json({ result: "bad", message: "Critical error occured" });
             else
@@ -104,15 +104,14 @@ router.post('/resetPassword', function (req, res) {
     }
 });
 
-// router.post('/delete', verifyToken, function (req, res) {
-//     User.findOneAndRemove({ username: req.username }, function (err, user) {
-//         if (err) {
-//             res.status(400).json({ result: "bad", message: "Critical error occured" });
-//         }
-//         else {
-//             res.status(200).json({ result: "ok", message: "Account deleted succesfully", user: user.username });
-//         }
-//     });
-// });
+//delete user Account
+router.delete('/', requireAuth, function (req, res) {
+    User.findByIdAndRemove(req.userId, (err, user) => {
+        if (err)
+            res.status(400).json({ result: "bad", message: "Critical error occured" });
+        else
+            res.status(200).json({ result: "ok", message: "Account deleted succesfully", user: user.username });
+    });
+});
 
 module.exports = router;

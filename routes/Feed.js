@@ -1,10 +1,9 @@
 //Includes
-var express = require('express');
-var request = require('request');
-var mongoose = require('mongoose');
-var fs = require('fs');
-var uuidv4 = require('uuid/v4');
-var path = require('path');
+const express = require('express');
+const request = require('request');
+const mongoose = require('mongoose');
+const uuidv4 = require('uuid/v4');
+const path = require('path');
 const sharp = require('sharp');
 
 var router = express.Router();
@@ -17,12 +16,11 @@ var User = require('../models/UserModel');
 var Post = require('../models/PostModel');
 var Category = require('../models/CategoryModel');
 
-
-
 //return user feed
 router.get('/', requireAuth, function (req, res) {
     User.findById(req.userId)
         .populate('votes')
+        .select('-username')
         .populate({
             path: 'follows',
             populate: {
@@ -35,7 +33,7 @@ router.get('/', requireAuth, function (req, res) {
                 }
             }
         })
-        .exec(function (err, data) {
+        .exec((err, data) => {
             if (err) {
                 res.status(500).json({ result: "bad", message: err.message });
             }
@@ -52,37 +50,37 @@ router.get('/', requireAuth, function (req, res) {
 
 
                 Promise.all(promises).then(() => {
-                    res.status(200).json({ result: "ok", message: "Returned posts", data: data});
+                    res.status(200).json({ result: "ok", message: "Returned posts", data: data });
                 });
             }
         });
 });
 
-//new post
+//send new post
 router.post('/', requireAuth, function (req, res) {
-    User.findById(req.userId, function (err, user) {
+    User.findById(req.userId, (err, user) => {
         if (err) {
             res.status(500).json({ result: "bad", message: err.message });
         }
         else {
             if (req.body.image && req.body.category) {
 
-                //Posting user id
+                //User id
                 var userId = user._id;
 
-                //Unique image id
-                var uuid = uuidv4();
+                //Image path
+                var imgBasePath = uuidv4();
 
                 //Post Instance
                 var postModel = {
                     owner: userId,
-                    fullImage: path.join(UploadBase, uuid + '.webp'),
-                    smallImage: path.join(UploadBase, uuid + '-t.webp'),
+                    fullImage: path.join(uploads, imgBasePath + '.webp'),
+                    smallImage: path.join(uploads, imgBasePath  + '-t.webp'),
                     likes: 0,
                     dislikes: 0
                 };
 
-                Category.CreateIfNotExists(req.body.category, function (category) {
+                Category.CreateIfNotExists(req.body.category, category => {
 
                     postModel.category = category._id;
 
@@ -98,15 +96,15 @@ router.post('/', requireAuth, function (req, res) {
                             var promises = [];
                             promises.push(
                                 sharp(imgBuffer)
-                                    .resize(128, 128)
-                                    .webp({ quality: 70 }).toFile(post.smallImage));
+                                    .resize(256, 256)
+                                    .webp({ quality: thumbnailQuality }).toFile(post.smallImage));
 
 
                             promises.push(
                                 sharp(imgBuffer)
-                                    .webp({ quality: 80 }).toFile(post.fullImage));
+                                    .webp({ quality: imageQuality }).toFile(post.fullImage));
 
-                            Promise.all(promises).then(function () {
+                            Promise.all(promises).then(() => {
                                 category.imagecount++;
                                 category.posts.push(post._id);
                                 category.save();
@@ -127,27 +125,26 @@ router.post('/', requireAuth, function (req, res) {
 });
 
 //return single post detail
-router.post('/getPostDetail', requireAuth, function (req, res) {
-    Post.findById(req.body.postId)
+router.get('/detail', requireAuth, function (req, res) {
+    Post.findById(req.query.postId)
         .populate('owner', 'username')
         .populate('category', 'name')
         .exec((err, post) => {
             if (err) {
-                res.status(500).json({ result: "bad", message: err.message })
+                res.status(400).json({ result: "bad", message: err.message })
             }
             else {
-                sharp(post.smallImage).toBuffer().then(data => {
+                sharp(post.fullImage).toBuffer().then(data => {
                     post.image = data.toString('base64');
                     res.status(200).json({ result: "ok", message: "Post returned", post: post })
                 });
-
             }
         });
 });
 
-router.post('/getVoteStatus', requireAuth, function (req, res) {
+//get vote status
+router.get('/vote', requireAuth, function (req, res) {
     User.findById(req.userId, (err, user) => {
-
         var vote = -1;
 
         for (var i = 0; i < user.votes.length; i++) {
@@ -160,18 +157,28 @@ router.post('/getVoteStatus', requireAuth, function (req, res) {
     });
 });
 
-router.post('/votePost', requireAuth, function (req, res) {
+//send new vote
+router.post('/vote', requireAuth, function (req, res) {
     User.findById(req.userId, (err, user) => {
 
         var vote = req.body.vote;
-        if (vote >= 1)
+        if (vote >= 0)
             vote = 1;
         else
-            vote = 0;
+            vote = -1;
 
-        var index = user.votes.indexOf(req.body.postId);
+
+        //Find post index in user votes
+        var index = -1;
+        for (var i = 0; i < user.votes.length; i++) {
+            if (user.votes[i].id == req.body.postId) {
+                index = i;
+                break;
+            }
+        }
+
         if (index == -1) {
-            //If didn't voted before
+            //If user didn't voted before
 
             var insertModel = {
                 _id: new mongoose.Types.ObjectId(req.body.postId),
@@ -179,18 +186,42 @@ router.post('/votePost', requireAuth, function (req, res) {
             }
             user.votes.push(insertModel);
             user.save();
+
+            Post.findById(req.body.postId, (err, post) => {
+                if (vote == 1)
+                    post.likes = post.likes + 1;
+                else
+                    post.dislikes = post.dislikes + 1;
+
+                post.save();
+                res.status(200).json({ result: "ok", message: "Voted post" })
+            });
+        }
+        else {
+            //voted before
+            prevVote = user.votes[index].vote;
+
+            if (prevVote == vote) {
+                res.status(200).json({ result: "ok", message: "Same vote" });
+                return;
+            }
+
+            //update user vote
+            user.votes[index].vote = vote;
+            user.save();
+
+            Post.findById(req.body.postId, (err, post) => {
+                post.likes = post.likes + vote;
+                post.dislikes = post.dislikes - vote;
+
+                post.save();
+                res.status(200).json({ result: "ok", message: "Voted post" })
+            });
         }
 
-        Post.findById(req.body.postId, (err, post) => {
-            if (vote == 1)
-                post.likes = post.likes + 1;
-            else
-                post.dislikes = post.dislikes + 1;
 
-            post.save();
-            res.status(200).json({ result: "ok", message: "Voted post" })
-        });
 
     });
 });
+
 module.exports = router;
