@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const uuidv4 = require('uuid/v4');
 const path = require('path');
 const sharp = require('sharp');
-
+mongoose.Promise = Promise;
 var router = express.Router();
 
 //Middleware
@@ -16,10 +16,9 @@ var User = require('../models/UserModel');
 var Post = require('../models/PostModel');
 var Category = require('../models/CategoryModel');
 
-//return user feed
+//return user main feed
 router.get('/', requireAuth, function (req, res) {
     User.findById(req.userId)
-        .populate('votes')
         .select('-username')
         .populate({
             path: 'follows',
@@ -56,6 +55,34 @@ router.get('/', requireAuth, function (req, res) {
         });
 });
 
+//return user liked images and user psots
+router.get('/profile', requireAuth, function (req, res) {
+    User.findById(req.userId)
+        .then(user => {
+
+            var liked = user.votes.filter(vote => { return vote.vote == 1; }).map(e => e.id);
+            var postArray = [];
+
+            Post.find({ '_id': { $in: liked } }).sort({ 'createdAt': 'desc' }).select('id smallImage').then(posts => {
+
+                var promises = [];
+                posts.forEach((post, i) => {
+                    promises.push(sharp(post.smallImage).toBuffer().then(imgData => {
+                        post.image = imgData.toString('base64');
+                    }));
+                });
+
+                Promise.all(promises).then(() => {
+                    res.status(200).json({ result: "ok", message: "Returned profile data", posts: posts });
+                });
+            });
+            // .then(
+            // Post.find({ 'owner': req.userId }).exec().then(posts => {
+            //     postArray = posts;
+            // }))
+        });
+});
+
 //send new post
 router.post('/', requireAuth, function (req, res) {
     User.findById(req.userId, (err, user) => {
@@ -75,7 +102,7 @@ router.post('/', requireAuth, function (req, res) {
                 var postModel = {
                     owner: userId,
                     fullImage: path.join(uploads, imgBasePath + '.webp'),
-                    smallImage: path.join(uploads, imgBasePath  + '-t.webp'),
+                    smallImage: path.join(uploads, imgBasePath + '-t.webp'),
                     likes: 0,
                     dislikes: 0
                 };
@@ -145,10 +172,10 @@ router.get('/detail', requireAuth, function (req, res) {
 //get vote status
 router.get('/vote', requireAuth, function (req, res) {
     User.findById(req.userId, (err, user) => {
-        var vote = -1;
+        var vote = 0;
 
         for (var i = 0; i < user.votes.length; i++) {
-            if (user.votes[i].id == req.body.postId) {
+            if (user.votes[i].id == req.query.postId) {
                 vote = user.votes[i].vote;
                 break;
             }
@@ -194,7 +221,7 @@ router.post('/vote', requireAuth, function (req, res) {
                     post.dislikes = post.dislikes + 1;
 
                 post.save();
-                res.status(200).json({ result: "ok", message: "Voted post" })
+                res.status(200).json({ result: "ok", message: "Voted post", likes: post.likes, dislikes: post.dislikes })
             });
         }
         else {
@@ -215,7 +242,7 @@ router.post('/vote', requireAuth, function (req, res) {
                 post.dislikes = post.dislikes - vote;
 
                 post.save();
-                res.status(200).json({ result: "ok", message: "Voted post" })
+                res.status(200).json({ result: "ok", message: "Voted post", likes: post.likes, dislikes: post.dislikes })
             });
         }
 
