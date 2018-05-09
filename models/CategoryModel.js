@@ -11,11 +11,11 @@ const CategorySchema = new Schema({
 //CategorySchema.plugin(mongooseHidden);
 
 CategorySchema.statics.CreateIfNotExists = function (categoryName, next) {
-    Category.findOne({ name: categoryName }, function (err, category) {
+    Category.findOne({ name: categoryName.toLowerCase() }, function (err, category) {
         if (!err) {
             if (!category) {
                 var categoryModel = {
-                    name: categoryName
+                    name: categoryName.toLowerCase()
                 };
                 Category.create(categoryModel, function (err, category) {
                     return next(category);

@@ -98,7 +98,7 @@ router.post('/follow', requireAuth, function (req, res) {
 router.get('/popular', requireAuth, function (req, res) {
     //Find categories with most images
     //Find images with most likes from these categories
-    Category.find().sort({ imagecount: 'desc' }).limit(5).populate({
+    Category.find().sort({ imagecount: 'desc' }).limit(10).populate({
         path: 'posts',
         select: { 'smallImage': 1, 'likes': 1 },
         options: { limit: 8 }
