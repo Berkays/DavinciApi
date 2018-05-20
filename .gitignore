@@ -1,3 +1,4 @@
 //Ignore modules folder
 node_modules/
 uploads/
+*.zip

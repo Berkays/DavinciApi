@@ -1,8 +1,8 @@
 module.exports = {
     "localmongoDB": "mongodb://localhost/DavinciDB",
-    "remotemongoDB":"mongoRemoteUrl",
+    "remotemongoDB":"",
     "secret": "danvincisecretkey",
     "tokenExpireTime": "7 Days",
-    "thumbnailQuality":80,
-    "imageQuality":85
+    "thumbnailQuality":60,
+    "imageQuality":70
 }

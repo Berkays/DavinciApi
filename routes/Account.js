@@ -69,7 +69,7 @@ router.post('/authenticate', function (req, res) {
                     user: user.username
                 };
                 var token = signToken(payload);
-                res.status(200).json({ result: "ok", message: "Authentication succesful", token: token, tokenExpire: config.tokenExpireTime });
+                res.status(200).json({ result: "ok", message: "Authentication successful", token: token, tokenExpire: config.tokenExpireTime });
             }
             else {
                 res.status(400).json({ result: "bad", message: "Incorrect password" });
@@ -111,6 +111,54 @@ router.delete('/', requireAuth, function (req, res) {
             res.status(400).json({ result: "bad", message: "Critical error occured" });
         else
             res.status(200).json({ result: "ok", message: "Account deleted succesfully", user: user.username });
+    });
+});
+
+router.put('/', requireAuth, function (req, res) {
+    User.findById(req.userId).then(user => {
+        if (!user) {
+            res.status(400).json({ result: "bad", message: "User not found" });
+            return;
+        }
+
+        if (req.body.username) {
+            //Change username
+            User.findOne({ username: req.body.username }).then(_user => {
+                if (_user) {
+                    res.status(400).json({ result: "bad", message: "Username already exists" });
+                }
+                else {
+                    user.username = req.body.username;
+                    user.save();
+                    res.status(200).json({ result: "ok", message: "Username changed successfully" });
+                }
+            });
+        }
+        else if (req.body.password) {
+            var bcryptSalt = bcrypt.genSaltSync();
+            var hash = bcrypt.hashSync(req.body.password, bcryptSalt);
+
+            user.password = hash;
+            user.save();
+
+            res.status(200).json({ result: "ok", message: "Password changed successfully" });
+        }
+        else if (req.body.email) {
+            //Change email
+            User.findOne({ email: req.body.email }).then(_user => {
+                if (_user) {
+                    res.status(400).json({ result: "bad", message: "Email already exists" });
+                }
+                else {
+                    user.email = req.body.email;
+                    user.save();
+                    res.status(200).json({ result: "ok", message: "Email changed successfully" });
+                }
+            });
+        }
+        else {
+            res.status(200).json({ result: "ok", message: "Nothing to change" });
+        }
     });
 });
 

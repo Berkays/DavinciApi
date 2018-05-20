@@ -61,25 +61,28 @@ router.get('/profile', requireAuth, function (req, res) {
         .then(user => {
 
             var liked = user.votes.filter(vote => { return vote.vote == 1; }).map(e => e.id);
-            var postArray = [];
 
-            Post.find({ '_id': { $in: liked } }).sort({ 'createdAt': 'desc' }).select('id smallImage').then(posts => {
+            Post.find({ '_id': { $in: liked } }).sort({ 'createdAt': 'desc' }).select('id smallImage').then(likedPosts => {
+                Post.find({ 'owner': req.userId }).select('id smallImage').then(userPosts => {
 
-                var promises = [];
-                posts.forEach((post, i) => {
-                    promises.push(sharp(post.smallImage).toBuffer().then(imgData => {
-                        post.image = imgData.toString('base64');
-                    }));
-                });
+                    var promises = [];
+                    likedPosts.forEach((post, i) => {
+                        promises.push(sharp(post.smallImage).toBuffer().then(imgData => {
+                            post.image = imgData.toString('base64');
+                        }));
+                    });
 
-                Promise.all(promises).then(() => {
-                    res.status(200).json({ result: "ok", message: "Returned profile data", posts: posts });
+                    userPosts.forEach((post, i) => {
+                        promises.push(sharp(post.smallImage).toBuffer().then(imgData => {
+                            post.image = imgData.toString('base64');
+                        }));
+                    });
+
+                    Promise.all(promises).then(() => {
+                        res.status(200).json({ result: "ok", message: "Returned profile data", likedPosts: likedPosts, userPosts: userPosts });
+                    });
                 });
             });
-            // .then(
-            // Post.find({ 'owner': req.userId }).exec().then(posts => {
-            //     postArray = posts;
-            // }))
         });
 });
 
@@ -123,12 +126,16 @@ router.post('/', requireAuth, function (req, res) {
                             var promises = [];
                             promises.push(
                                 sharp(imgBuffer)
-                                    .resize(256, 256)
+                                    .resize(200, 200)
+                                    .crop(sharp.strategy.entropy)
                                     .webp({ quality: thumbnailQuality }).toFile(post.smallImage));
 
 
                             promises.push(
                                 sharp(imgBuffer)
+                                    .resize(900, 1600)
+                                    .background({ r: 0, g: 0, b: 0, alpha: 0 })
+                                    .embed()
                                     .webp({ quality: imageQuality }).toFile(post.fullImage));
 
                             Promise.all(promises).then(() => {

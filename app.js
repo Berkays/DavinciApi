@@ -24,8 +24,8 @@ var feedRoute = require('.//routes/Feed');
 var categoryRoute = require('.//routes/Category');
 
 //Middlewares
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json({limit:'10mb'}));
+app.use(bodyParser.urlencoded({ extended: false,limit:'10mb' }));
 app.use(morgan('dev'));
 
 app.use('/api/account', accountRoute);
