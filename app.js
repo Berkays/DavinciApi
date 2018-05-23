@@ -15,7 +15,7 @@ global.imageQuality = config.imageQuality;
 var app = express();
 
 //Initialize
-mongoose.connect(config.remotemongoDB);
+mongoose.connect(config.localmongoDB);
 var mongoDB = mongoose.connection;
 
 //Routes
